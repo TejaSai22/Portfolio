@@ -16,9 +16,12 @@
   <meta property="og:description"
     content="Projects in multi-agent systems, RAG pipelines, applied ML and full-stack platforms.">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="assets/hero-illustration.png">
+  <meta property="og:image" content="https://tejasai.dev/assets/og-room.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <meta property="og:url" content="https://tejasai.dev">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://tejasai.dev/assets/og-room.png">
   <meta name="twitter:title" content="Teja Sai Srinivas | AI/ML Engineer & Data Scientist">
   <meta name="twitter:description" content="AI/ML engineer building multi-agent systems, RAG pipelines, and production-grade APIs.">
   <meta name="theme-color" content="#f3efe6">
@@ -63,6 +66,7 @@
 
 <body>
   <a href="#main" class="skip">Skip to content</a>
+  <div class="progress" id="progress" aria-hidden="true"></div>
 
   <!-- ─────────── NAV ─────────── -->
   <header class="nav" id="nav">
@@ -81,6 +85,9 @@
 
     <div class="nav-right">
       <span class="nav-clock mono" id="clock" title="Local time in Denton, TX">Denton, TX</span>
+      <button class="kbd-btn mono" id="cmdkBtn" aria-label="Open quick menu" aria-haspopup="dialog">
+        <kbd>⌘</kbd><kbd>K</kbd>
+      </button>
       <button class="icon-btn" id="themeToggle" aria-label="Toggle dark mode">
         <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
           stroke-linecap="round">
@@ -139,6 +146,12 @@
               <span class="sr">Contact me</span></button>
             <button class="spot" data-id="window" data-box="16,20,70,66" data-go="theme" data-label="Day / night">
               <span class="sr">Toggle day and night</span></button>
+            <button class="spot" data-id="bag" data-box="266,81,34,72" data-go="#offcourt" data-label="Off the court">
+              <span class="sr">Tennis, off the court</span></button>
+            <button class="spot" data-id="ball" data-box="296,150,9,8" data-go="ball" data-label="Bounce!">
+              <span class="sr">Bounce the tennis ball</span></button>
+            <button class="spot" data-id="lamp" data-box="115,76,22,24" data-go="lamp" data-label="Lamp on/off">
+              <span class="sr">Toggle the desk lamp</span></button>
             <a class="spot" data-id="tower" data-box="225,126,20,31" href="https://github.com/TejaSai22" target="_blank"
               rel="noopener" data-label="GitHub ↗"><span class="sr">GitHub profile</span></a>
             <a class="spot" data-id="resume" data-box="244,104,16,8" href="KTejaSaiSrinivas_Resume.pdf" target="_blank"
@@ -192,11 +205,16 @@
             interfaces people actually want to use. I'm especially drawn to high-stakes domains like
             healthcare and security, where getting it right matters more than getting it flashy.
           </p>
+          <p id="offcourt">
+            Off the keyboard, you'll usually find me on a tennis court. It's the best debugging
+            break I know, and a rally teaches the same thing a good model does: stay consistent, then adjust.
+          </p>
           <ul class="facts mono">
             <li><span>Based in</span>Denton, Texas</li>
             <li><span>Studied</span>MS Data Science, UNT</li>
             <li><span>Certified</span>OCI Data Science Professional</li>
             <li><span>Looking for</span>AI/ML · SWE-AI · Data roles</li>
+            <li><span>Off the clock</span>Tennis, probably</li>
           </ul>
         </div>
       </div>
@@ -472,6 +490,7 @@
       <div class="contact-grid">
         <div class="contact-direct reveal">
           <a href="mailto:tejasaisrin22@gmail.com" class="contact-email">tejasaisrin22@gmail.com</a>
+          <button class="copy-btn mono" data-copy="tejasaisrin22@gmail.com">Copy email</button>
           <ul class="contact-list mono">
             <li><a href="tel:+19405972906">+1 (940) 597-2906</a></li>
             <li><a href="https://www.linkedin.com/in/teja-kunisetty/" target="_blank" rel="noopener">LinkedIn ↗</a></li>
@@ -515,6 +534,28 @@
       <a href="#top">Back to top ↑</a>
     </div>
   </footer>
+
+  <dialog class="cmdk" id="cmdk" aria-label="Quick menu">
+    <div class="cmdk-box">
+      <input class="cmdk-input" id="cmdkInput" type="text" placeholder="Where to? Type to filter…" autocomplete="off"
+        aria-label="Filter commands" aria-controls="cmdkList">
+      <ul class="cmdk-list" id="cmdkList" role="listbox">
+        <li role="option" data-run="#work"><span>Projects</span><small>Go to</small></li>
+        <li role="option" data-run="#about"><span>About me</span><small>Go to</small></li>
+        <li role="option" data-run="#journey"><span>Education &amp; experience</span><small>Go to</small></li>
+        <li role="option" data-run="#stack"><span>Tech stack</span><small>Go to</small></li>
+        <li role="option" data-run="#contact"><span>Contact</span><small>Go to</small></li>
+        <li role="option" data-run="copy"><span>Copy email address</span><small>Action</small></li>
+        <li role="option" data-run="theme"><span>Toggle day / night</span><small>Action</small></li>
+        <li role="option" data-run="ball"><span>Bounce a tennis ball</span><small>Action</small></li>
+        <li role="option" data-run="url:KTejaSaiSrinivas_Resume.pdf"><span>Open résumé (PDF)</span><small>Link</small></li>
+        <li role="option" data-run="url:https://github.com/TejaSai22"><span>GitHub</span><small>Link</small></li>
+        <li role="option" data-run="url:https://www.linkedin.com/in/teja-kunisetty/"><span>LinkedIn</span><small>Link</small></li>
+      </ul>
+      <p class="cmdk-foot mono"><span>↑↓ move</span><span>↵ open</span><span>esc close</span></p>
+    </div>
+  </dialog>
+  <div class="toast mono" id="toast" role="status" aria-live="polite"></div>
 
   <script src="script.js"></script>
 </body>

@@ -557,6 +557,76 @@ a.cert:hover { transform: translateY(-4px); border-color: var(--ink); }
 .footer-row a:hover { color: var(--accent); }
 
 /* ============================================================
+   EXTRAS: progress, quick menu, toast, copy
+   ============================================================ */
+.progress {
+  position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 60;
+  background: var(--accent);
+  transform-origin: 0 50%; transform: scaleX(0);
+}
+
+.kbd-btn {
+  display: inline-flex; gap: 3px; align-items: center;
+  height: 40px; padding: 0 10px; border-radius: 999px;
+  border: 1px solid var(--line);
+  transition: border-color .3s;
+}
+.kbd-btn:hover { border-color: var(--ink); }
+.kbd-btn kbd {
+  font-family: var(--f-mono); font-size: 11px; line-height: 1;
+  min-width: 18px; padding: 3px 4px; border-radius: 4px;
+  background: var(--bg-2); color: var(--ink-2); text-align: center;
+}
+
+.cmdk {
+  margin: 14vh auto auto; padding: 0; border: 0; background: transparent;
+  width: min(560px, calc(100vw - 32px));
+  color: var(--ink);
+}
+.cmdk::backdrop { background: rgba(8, 10, 18, .45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.cmdk[open] .cmdk-box { animation: pop .25s var(--ease); }
+@keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+.cmdk-box {
+  background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, .45);
+  overflow: hidden;
+}
+.cmdk-input {
+  width: 100%; border: 0; border-bottom: 1px solid var(--line);
+  background: transparent; color: var(--ink);
+  font: inherit; font-size: 17px; padding: 18px 20px;
+}
+.cmdk-input:focus { outline: none; }
+.cmdk-list { max-height: 50vh; overflow-y: auto; padding: 8px; }
+.cmdk-list li {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 11px 12px; border-radius: 10px; cursor: pointer;
+}
+.cmdk-list li[hidden] { display: none; }
+.cmdk-list li[aria-selected="true"] { background: var(--ink); color: var(--bg); }
+.cmdk-list li[aria-selected="true"] small { color: var(--accent); }
+.cmdk-list small { font-family: var(--f-mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.cmdk-foot { display: flex; gap: 16px; padding: 10px 20px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); }
+
+.toast {
+  position: fixed; left: 50%; bottom: 24px; z-index: 120;
+  transform: translate(-50%, 20px); opacity: 0;
+  background: var(--ink); color: var(--bg);
+  padding: 10px 16px; border-radius: 999px; font-size: 13px;
+  pointer-events: none;
+  transition: opacity .25s, transform .35s var(--ease);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+.copy-btn {
+  display: inline-flex; margin: 14px 0 0 2px;
+  font-size: 12px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line);
+  transition: border-color .2s, color .2s;
+}
+.copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+.contact-direct .contact-email { display: block; width: fit-content; }
+
+/* ============================================================
    REVEAL
    ============================================================ */
 .js .reveal { opacity: 0; transform: translateY(24px); transition: opacity .9s var(--ease), transform .9s var(--ease); }
@@ -580,7 +650,7 @@ a.cert:hover { transform: translateY(-4px); border-color: var(--ink); }
 }
 
 @media (max-width: 860px) {
-  .nav-clock { display: none; }
+  .nav-clock, .kbd-btn { display: none; }
   .menu-btn { display: grid; }
   .nav-links {
     position: fixed; inset: 68px 12px auto 12px;

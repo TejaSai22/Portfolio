@@ -142,12 +142,109 @@
       const action = btn.dataset.go;
       document.querySelector('.room-frame')?.classList.add('seen');
       if (action === 'theme') { toggleTheme(); return; }
+      if (action === 'lamp') { room && room.toggleLamp(); return; }
+      if (action === 'ball') { room && room.bounce(); return; }
       const target = document.querySelector(action);
       if (!target) return;
       target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
       setTimeout(() => flash(target), reduceMotion ? 0 : 500);
     });
   });
+
+  /* ─────────── Toast + copy ─────────── */
+  const toast = document.getElementById('toast');
+  let toastTimer;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('Copied ' + text);
+    } catch (e) {
+      showToast(text);
+    }
+  }
+  document.querySelectorAll('[data-copy]').forEach(b =>
+    b.addEventListener('click', () => copyText(b.dataset.copy)));
+
+  /* ─────────── Scroll progress ─────────── */
+  const progress = document.getElementById('progress');
+  function onScrollProgress() {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    progress.style.transform = `scaleX(${max > 0 ? window.scrollY / max : 0})`;
+  }
+  window.addEventListener('scroll', onScrollProgress, { passive: true });
+  onScrollProgress();
+
+  /* ─────────── Quick menu (⌘K / Ctrl+K) ─────────── */
+  const cmdk = document.getElementById('cmdk');
+  const cmdkInput = document.getElementById('cmdkInput');
+  const cmdkItems = [...document.querySelectorAll('#cmdkList li')];
+  let sel = 0;
+
+  function visibleItems() { return cmdkItems.filter(li => !li.hidden); }
+  function paint() {
+    const vis = visibleItems();
+    cmdkItems.forEach(li => li.setAttribute('aria-selected', 'false'));
+    if (vis[sel]) { vis[sel].setAttribute('aria-selected', 'true'); vis[sel].scrollIntoView({ block: 'nearest' }); }
+  }
+  function openCmdk() {
+    if (!cmdk || cmdk.open) return;
+    cmdkInput.value = '';
+    cmdkItems.forEach(li => li.hidden = false);
+    sel = 0; paint();
+    cmdk.showModal();
+    cmdkInput.focus();
+  }
+  function closeCmdk() { if (cmdk && cmdk.open) cmdk.close(); }
+  function run(cmd) {
+    closeCmdk();
+    if (cmd === 'copy') {
+      const src = document.querySelector('[data-copy]');
+      return src && copyText(src.dataset.copy);
+    }
+    if (cmd === 'theme') return toggleTheme();
+    if (cmd === 'ball') {
+      document.getElementById('top').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+      return setTimeout(() => room && room.bounce(), reduceMotion ? 0 : 450);
+    }
+    if (cmd.startsWith('url:')) return window.open(cmd.slice(4), '_blank', 'noopener');
+    const target = document.querySelector(cmd);
+    if (target) target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+  }
+
+  if (cmdk) {
+    const cmdkBtn = document.getElementById('cmdkBtn');
+    if (!/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)) cmdkBtn.querySelector('kbd').textContent = 'Ctrl';
+    cmdkBtn.addEventListener('click', openCmdk);
+    document.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        cmdk.open ? closeCmdk() : openCmdk();
+      }
+    });
+    cmdkInput.addEventListener('input', () => {
+      const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+      const q = norm(cmdkInput.value.trim());
+      cmdkItems.forEach(li => li.hidden = !!q && !norm(li.textContent).includes(q));
+      sel = 0; paint();
+    });
+    cmdkInput.addEventListener('keydown', e => {
+      const vis = visibleItems();
+      if (e.key === 'ArrowDown') { e.preventDefault(); sel = Math.min(sel + 1, vis.length - 1); paint(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); sel = Math.max(sel - 1, 0); paint(); }
+      else if (e.key === 'Enter' && vis[sel]) { e.preventDefault(); run(vis[sel].dataset.run); }
+    });
+    cmdkItems.forEach(li => {
+      li.addEventListener('click', () => run(li.dataset.run));
+      li.addEventListener('mousemove', () => { sel = visibleItems().indexOf(li); paint(); });
+    });
+    cmdk.addEventListener('click', e => { if (e.target === cmdk) closeCmdk(); });
+  }
 
   /* ============================================================
      THE ROOM — pixel-art scene drawn on a 320×180 canvas
@@ -161,6 +258,10 @@
 
     let hovered = null;
     let frame = 0;
+    let lampOn = true;
+    // tennis ball easter egg: rests by the bag, bounces across the room when clicked
+    const ball = { x: 300, from: 300, to: 300, start: -1, dur: 26 };
+    const BALL_Y = 154;
 
     // seeded RNG so the scene is stable between frames
     function rng(seed) {
@@ -214,7 +315,7 @@
     const spots = {};
     document.querySelectorAll('.spot').forEach(s => {
       const [x, y, w, h] = s.dataset.box.split(',').map(Number);
-      spots[s.dataset.id] = { x, y, w, h };
+      spots[s.dataset.id] = { x, y, w, h, el: s };
       s.style.left = (x / W * 100) + '%';
       s.style.top = (y / H * 100) + '%';
       s.style.width = (w / W * 100) + '%';
@@ -356,6 +457,9 @@
       [[26, 86, 20, 74], [26, 86, 31, 72], [26, 86, 36, 80], [26, 86, 16, 82], [26, 86, 25, 70]].forEach(([a, b, c, d], i) => {
         line(a, b, c, d, leaf[i % 3]); line(a + 1, b, c + 1, d, leaf[(i + 1) % 3]);
       });
+      // can of tennis balls
+      r(42, 84, 9, 12, 'rgba(230,240,250,.55)'); r(42, 84, 9, 2, ACCENT); r(42, 94, 9, 2, '#d9d3c4');
+      disc(46, 88, 2, '#d7f031'); disc(46, 92, 1, '#c3dc22'); px(45, 87, '#f4ffd0');
 
       /* desk legs + under-desk stuff */
       r(112, 116, 4, 42, '#6e4326'); r(254, 116, 4, 42, '#6e4326');
@@ -370,7 +474,27 @@
       px(240, 153, led ? '#45f08a' : '#1d5a36'); px(237, 153, (t % 5) < 2 ? '#ff9f43' : '#5a3a1a');
       r(225, 157, 20, 1, P.shadow);
 
-      /* desk top */
+      /* tennis: racquet poking out of a bag */
+      const rcx = 281, rcy = 92, rx = 8, ry = 11;
+      for (let y = -ry; y <= ry; y++) for (let x = -rx; x <= rx; x++) {
+        const d = (x * x) / (rx * rx) + (y * y) / (ry * ry);
+        if (d <= 1 && d >= .66) px(rcx + x, rcy + y, d > .85 ? '#22252c' : '#3a3f4a');
+        else if (d < .66 && ((x + 40) % 2 === 0 || (y + 40) % 2 === 0)) px(rcx + x, rcy + y, '#e8e2d6');
+      }
+      r(rcx - 3, rcy - ry, 2, 2, ACCENT); r(rcx + 2, rcy - ry, 2, 2, ACCENT);
+      line(rcx - 3, rcy + ry, rcx - 1, rcy + ry + 6, '#22252c'); line(rcx + 3, rcy + ry, rcx + 1, rcy + ry + 6, '#22252c');
+      r(rcx - 1, rcy + ry + 5, 3, 4, '#22252c');
+      // second racquet's handle
+      r(290, 104, 4, 9, '#f4efe6'); for (let y = 105; y < 113; y += 2) r(290, y, 4, 1, '#cfc8b8'); r(290, 103, 4, 1, '#22252c');
+      // the bag
+      r(270, 111, 28, 2, '#1f6f5c'); r(268, 113, 32, 39, '#1f6f5c'); r(270, 152, 28, 1, '#1f6f5c');
+      r(268, 113, 2, 39, '#2a8a72'); r(298, 113, 2, 39, '#174f42');
+      r(270, 116, 28, 1, '#174f42');
+      r(268, 123, 32, 3, '#f4efe6'); r(268, 126, 32, 1, ACCENT);
+      r(272, 131, 24, 15, '#1a5e4e'); r(273, 133, 22, 1, '#123d33'); r(282, 134, 3, 2, '#d9d3c4');
+      line(269, 114, 297, 150, '#123d33');
+      r(266, 153, 36, 1, P.shadow);
+
       r(108, 112, 154, 4, '#b0703f'); r(108, 116, 154, 2, '#8a5530'); r(108, 112, 154, 1, '#c98552');
 
       /* lamp */
@@ -409,9 +533,10 @@
       r(204, 109, 5, 3, '#d9d3c4'); px(206, 109, '#9a958a');
 
       /* rubber duck */
-      r(131, 106, 9, 6, '#f6c935'); r(134, 102, 6, 5, '#f6c935');
-      r(140, 104, 3, 2, '#ff8a1f'); px(137, 103, '#1a1a1a'); r(131, 106, 2, 2, '#e0b020');
-      r(133, 108, 4, 1, '#e0b020');
+      const dq = hovered === 'duck' && (t % 4) < 2 ? -2 : 0;
+      r(131, 106 + dq, 9, 6, '#f6c935'); r(134, 102 + dq, 6, 5, '#f6c935');
+      r(140, 104 + dq, 3, 2, '#ff8a1f'); px(137, 103 + dq, '#1a1a1a'); r(131, 106 + dq, 2, 2, '#e0b020');
+      r(133, 108 + dq, 4, 1, '#e0b020');
 
       /* mug + steam */
       r(228, 102, 9, 10, '#f4efe6'); r(237, 104, 2, 5, '#f4efe6'); r(239, 105, 1, 3, '#f4efe6');
@@ -428,15 +553,40 @@
       r(244, 106, 15, 6, '#e8e2d6'); r(245, 105, 15, 6, '#fbf8f1');
       r(247, 106, 6, 1, ACCENT); r(247, 108, 10, 1, '#b3a483'); r(247, 110, 8, 1, '#b3a483');
 
+      /* tennis ball */
+      let by = BALL_Y;
+      if (ball.start >= 0) {
+        const p = Math.min(1, (t - ball.start) / ball.dur);
+        ball.x = Math.round(ball.from + (ball.to - ball.from) * p);
+        by = BALL_Y - Math.round(Math.abs(Math.sin(p * Math.PI * 3)) * 16 * (1 - p));
+        if (p >= 1) ball.start = -1;
+        if (spots.ball) { spots.ball.x = ball.x - 4; spots.ball.el.style.left = ((ball.x - 4) / W * 100) + '%'; }
+      }
+      r(ball.x - 2, BALL_Y + 2, 5, 1, P.shadow);
+      disc(ball.x, by, 2, '#d7f031'); px(ball.x - 1, by - 1, '#f4ffd0'); px(ball.x + 1, by + 1, '#b9d11c');
+
+      /* bulb */
+      if (lampOn) r(128, 85, 6, 1, '#ffe9a8');
+
       /* lamp light */
       if (night) {
+        if (lampOn) {
         ctx.fillStyle = 'rgba(255,214,140,.10)';
         ctx.beginPath(); ctx.moveTo(127, 85); ctx.lineTo(135, 85); ctx.lineTo(162, 112); ctx.lineTo(104, 112); ctx.closePath(); ctx.fill();
         ctx.fillStyle = 'rgba(255,214,140,.08)';
         ctx.fillRect(104, 110, 60, 3);
+        }
+        // shooting star every so often
+        const ss = t % 70;
+        if (!reduceMotion && ss < 6) {
+          const sx = 72 - ss * 8, sy = 26 + ss * 3;
+          ctx.save(); ctx.beginPath(); ctx.rect(19, 23, 64, 60); ctx.clip();
+          line(sx, sy, sx + 6, sy - 2, 'rgba(255,255,255,.5)'); px(sx, sy, '#ffffff');
+          ctx.restore();
+        }
         // darken edges of room at night
         const g = ctx.createRadialGradient(170, 95, 40, 170, 95, 210);
-        g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(4,6,18,.45)');
+        g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, lampOn ? 'rgba(4,6,18,.45)' : 'rgba(4,6,18,.62)');
         ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
       }
 
@@ -458,6 +608,16 @@
     draw();
     if (!reduceMotion) requestAnimationFrame(loop);
 
-    return { redraw: draw };
+    return {
+      redraw: draw,
+      toggleLamp() { lampOn = !lampOn; draw(); },
+      bounce() {
+        if (ball.start >= 0) return;
+        ball.from = ball.x;
+        ball.to = ball.x > 240 ? 165 + Math.floor(Math.random() * 50) : 300;
+        ball.start = frame;
+        if (reduceMotion) { ball.x = ball.to; ball.start = -1; draw(); }
+      }
+    };
   })();
 })();
